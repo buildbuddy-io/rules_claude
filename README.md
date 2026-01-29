@@ -10,7 +10,7 @@ Add the following to your `MODULE.bazel`:
 bazel_dep(name = "rules_claude", version = "0.1.0")
 git_override(
     module_name = "rules_claude",
-    remote = "https://github.com/your-org/rules_claude.git",
+    remote = "https://github.com/buildbuddy-rules/rules_claude.git",
     commit = "d2d43d6f070ce1b4d7fca43ae186193a7e6bca94",
 )
 ```
