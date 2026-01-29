@@ -4,6 +4,7 @@ load("@tools_claude//claude:defs.bzl", "CLAUDE_TOOLCHAIN_TYPE")
 
 def _claude_impl(ctx):
     """Implementation of the claude rule."""
+    local_auth = ctx.attr.local_auth[LocalAuthInfo].value
     toolchain = ctx.toolchains[CLAUDE_TOOLCHAIN_TYPE]
     claude_binary = toolchain.claude_info.binary
 
@@ -33,12 +34,22 @@ def _claude_impl(ctx):
     args.add("-p")
     args.add(full_prompt)
 
+    # If local_auth is enabled, run locally without sandbox and use real HOME
+    # Otherwise, run sandboxed with a fake HOME
+    if local_auth:
+        env = None
+        execution_requirements = {"local": "1"}
+    else:
+        env = {"HOME": ".home"}
+        execution_requirements = None
+
     ctx.actions.run(
         executable = claude_binary,
         arguments = [args],
         inputs = ctx.files.srcs,
         outputs = [out],
-        env = {"HOME": ".home"},
+        env = env,
+        execution_requirements = execution_requirements,
         use_default_shell_env = True,
         mnemonic = "Claude",
         progress_message = "Running Claude: %s" % ctx.label,
@@ -60,7 +71,22 @@ claude = rule(
         "out": attr.string(
             doc = "Output filename. Defaults to <name>.txt if not specified.",
         ),
+        "local_auth": attr.label(
+            default = "@rules_claude//:local_auth",
+            doc = "Flag to enable local auth mode (runs without sandbox, uses real HOME).",
+        ),
     },
     toolchains = [CLAUDE_TOOLCHAIN_TYPE],
     doc = "Runs Claude Code with the given prompt and input files to produce an output.",
+)
+
+# Flag for enabling local auth mode
+LocalAuthInfo = provider(fields = ["value"])
+
+def _local_auth_flag_impl(ctx):
+    return LocalAuthInfo(value = ctx.build_setting_value)
+
+local_auth_flag = rule(
+    implementation = _local_auth_flag_impl,
+    build_setting = config.bool(flag = True),
 )
