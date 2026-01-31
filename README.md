@@ -58,6 +58,12 @@ claude_test(
     srcs = ["README.md"],
     prompt = "Walk through this README and verify all the steps work correctly.",
 )
+
+claude(
+    name = "website",
+    srcs = ["README.md"],
+    prompt = "Generate a complete static marketing website based on this README.",
+)
 ```
 
 ## Authentication
