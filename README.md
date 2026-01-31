@@ -66,6 +66,14 @@ claude_run(
     prompt = "Refactor this code to use modern Python 3.12 features like pattern matching and type hints.",
 )
 
+# Deploy interactively
+claude_run(
+    name = "deploy",
+    srcs = ["main.go"],
+    prompt = "Deploy this app to Google Cloud Run. Ask me for any credentials you need and give me links to where I can find them.",
+    interactive = True,
+)
+
 # Test that documentation is accurate
 claude_test(
     name = "validate_readme",

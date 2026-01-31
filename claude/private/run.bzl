@@ -30,14 +30,16 @@ def _claude_run_impl(ctx):
     elif ctx.attr.out:
         full_prompt = full_prompt + " Write the output to " + ctx.attr.out
 
+    prompt_flag = "" if ctx.attr.interactive else "-p"
     script = ctx.actions.declare_file(ctx.label.name + ".sh")
     script_content = """#!/bin/bash
 set -e
 SCRIPT_DIR="$(pwd)"
 cd "$BUILD_WORKING_DIRECTORY"
-exec "$SCRIPT_DIR/{claude_binary}" --dangerously-skip-permissions -p {prompt} "$@"
+exec "$SCRIPT_DIR/{claude_binary}" --dangerously-skip-permissions {prompt_flag} {prompt} "$@"
 """.format(
         claude_binary = claude_binary.short_path,
+        prompt_flag = prompt_flag,
         prompt = _shell_quote(full_prompt),
     )
     ctx.actions.write(
@@ -68,6 +70,10 @@ claude_run = rule(
         ),
         "outs": attr.string_list(
             doc = "Multiple output filenames.",
+        ),
+        "interactive": attr.bool(
+            default = False,
+            doc = "If True, runs in interactive mode.",
         ),
     },
     executable = True,
