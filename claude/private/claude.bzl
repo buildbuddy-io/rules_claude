@@ -9,11 +9,17 @@ def _claude_impl(ctx):
     toolchain = ctx.toolchains[CLAUDE_TOOLCHAIN_TYPE]
     claude_binary = toolchain.claude_info.binary
 
-    # Determine output file
-    if ctx.attr.out:
-        out = ctx.actions.declare_file(ctx.attr.out)
+    # Determine outputs: outs (multiple files) > out (single file) > directory
+    if ctx.attr.outs:
+        outputs = [ctx.actions.declare_file(f) for f in ctx.attr.outs]
+        output_paths = ", ".join([f.path for f in outputs])
+        output_instruction = " Write the outputs to these files: " + output_paths
+    elif ctx.attr.out:
+        outputs = [ctx.actions.declare_file(ctx.attr.out)]
+        output_instruction = " Write the output to " + outputs[0].path
     else:
-        out = ctx.actions.declare_file(ctx.label.name + ".txt")
+        outputs = [ctx.actions.declare_directory(ctx.label.name)]
+        output_instruction = " Write the output to the directory at " + outputs[0].path
 
     # Build the prompt
     prompt = ctx.attr.prompt
@@ -27,7 +33,7 @@ def _claude_impl(ctx):
     full_prompt = prompt
     if src_paths:
         full_prompt = "Input files: " + ", ".join(src_paths) + ". " + full_prompt
-    full_prompt = full_prompt + " Write the output to " + out.path
+    full_prompt = full_prompt + output_instruction
 
     # Build arguments for claude -p (print mode)
     args = ctx.actions.args()
@@ -48,7 +54,7 @@ def _claude_impl(ctx):
         executable = claude_binary,
         arguments = [args],
         inputs = ctx.files.srcs,
-        outputs = [out],
+        outputs = outputs,
         env = env,
         execution_requirements = execution_requirements,
         use_default_shell_env = True,
@@ -56,7 +62,7 @@ def _claude_impl(ctx):
         progress_message = "Running Claude: %s" % ctx.label,
     )
 
-    return [DefaultInfo(files = depset([out]))]
+    return [DefaultInfo(files = depset(outputs))]
 
 claude = rule(
     implementation = _claude_impl,
@@ -70,7 +76,10 @@ claude = rule(
             doc = "The prompt to send to Claude.",
         ),
         "out": attr.string(
-            doc = "Output filename. Defaults to <name>.txt if not specified.",
+            doc = "Output filename. If not specified, outputs to a directory.",
+        ),
+        "outs": attr.string_list(
+            doc = "Multiple output filenames. Takes precedence over out.",
         ),
         "local_auth": attr.label(
             default = "@rules_claude//:local_auth",
