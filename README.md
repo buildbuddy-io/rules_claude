@@ -149,6 +149,7 @@ Runs Claude Code with the given prompt and input files to produce an output.
 | `out` | `string` | Output filename. If not specified, outputs to a directory. |
 | `outs` | `string_list` | Multiple output filenames. Takes precedence over `out`. |
 | `local_auth` | `label` | Flag to enable local auth mode. Defaults to `@rules_claude//:local_auth`. |
+| `allowed_tools` | `string_list` | List of allowed tools. If empty, uses `--dangerously-skip-permissions`. See [permissions settings](https://docs.anthropic.com/en/docs/claude-code/settings#permissions-settings). |
 
 ### `claude_run`
 
@@ -160,6 +161,7 @@ Creates an executable that runs Claude Code with the given prompt. Use with `baz
 | `prompt` | `string` | **Required.** The prompt to send to Claude. |
 | `out` | `string` | Output filename to include in the prompt. |
 | `outs` | `string_list` | Multiple output filenames to include in the prompt. |
+| `allowed_tools` | `string_list` | List of allowed tools. If empty, uses `--dangerously-skip-permissions`. See [permissions settings](https://docs.anthropic.com/en/docs/claude-code/settings#permissions-settings). |
 
 ### `claude_test`
 
@@ -170,6 +172,7 @@ Runs Claude Code with the given prompt as a Bazel test. The agent evaluates the 
 | `srcs` | `label_list` | Input files to be processed by the prompt. |
 | `prompt` | `string` | **Required.** The prompt describing what to test and the pass/fail criteria. |
 | `local_auth` | `label` | Flag to enable local auth mode. Defaults to `@rules_claude//:local_auth`. |
+| `allowed_tools` | `string_list` | List of allowed tools. If empty, uses `--dangerously-skip-permissions`. See [permissions settings](https://docs.anthropic.com/en/docs/claude-code/settings#permissions-settings). |
 
 ## Requirements
 

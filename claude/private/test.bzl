@@ -37,9 +37,13 @@ def _claude_test_impl(ctx):
         env_vars = "export HOME=.home\n"
         execution_info = {}
 
+    permissions_flags = "--dangerously-skip-permissions"
+    if ctx.attr.allowed_tools:
+        permissions_flags = "--allowedTools " + " ".join(ctx.attr.allowed_tools)
+
     # Build the test script content
     script_content = """#!/bin/bash
-{env_vars}{claude_binary} --dangerously-skip-permissions -p {prompt}
+{env_vars}{claude_binary} {permissions_flags} -p {prompt}
 if [ ! -f {result_file} ]; then
     echo "FAIL: Result file was not created at {result_file}"
     exit 1
@@ -54,6 +58,7 @@ fi
 """.format(
         env_vars = env_vars,
         claude_binary = claude_binary.short_path,
+        permissions_flags = permissions_flags,
         prompt = repr(full_prompt),
         result_file = result_file,
     )
@@ -89,6 +94,9 @@ claude_test = rule(
         "local_auth": attr.label(
             default = "@rules_claude//:local_auth",
             doc = "Flag to enable local auth mode (runs without sandbox, uses real HOME).",
+        ),
+        "allowed_tools": attr.string_list(
+            doc = "List of allowed tools. If empty, uses --dangerously-skip-permissions. See https://docs.anthropic.com/en/docs/claude-code/settings#permissions-settings",
         ),
     },
     toolchains = [CLAUDE_TOOLCHAIN_TYPE],

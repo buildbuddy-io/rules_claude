@@ -37,7 +37,11 @@ def _claude_impl(ctx):
 
     # Build arguments for claude -p (print mode)
     args = ctx.actions.args()
-    args.add("--dangerously-skip-permissions")
+    if ctx.attr.allowed_tools:
+        args.add("--allowedTools")
+        args.add_all(ctx.attr.allowed_tools)
+    else:
+        args.add("--dangerously-skip-permissions")
     args.add("-p")
     args.add(full_prompt)
 
@@ -84,6 +88,9 @@ claude = rule(
         "local_auth": attr.label(
             default = "@rules_claude//:local_auth",
             doc = "Flag to enable local auth mode (runs without sandbox, uses real HOME).",
+        ),
+        "allowed_tools": attr.string_list(
+            doc = "List of allowed tools. If empty, uses --dangerously-skip-permissions. See https://docs.anthropic.com/en/docs/claude-code/settings#permissions-settings",
         ),
     },
     toolchains = [CLAUDE_TOOLCHAIN_TYPE],

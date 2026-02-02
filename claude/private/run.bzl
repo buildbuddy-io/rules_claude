@@ -31,13 +31,17 @@ def _claude_run_impl(ctx):
         full_prompt = full_prompt + " Write the output to " + ctx.attr.out
 
     prompt_flag = "" if ctx.attr.interactive else "-p"
+    permissions_flags = "--dangerously-skip-permissions"
+    if ctx.attr.allowed_tools:
+        permissions_flags = "--allowedTools " + " ".join(ctx.attr.allowed_tools)
     script = ctx.actions.declare_file(ctx.label.name + ".sh")
     script_content = """#!/bin/bash
 set -e
 SCRIPT_DIR="$(pwd)"
 cd "$BUILD_WORKING_DIRECTORY"
-exec "$SCRIPT_DIR/{claude_binary}" --dangerously-skip-permissions {prompt_flag} {prompt} "$@"
+exec "$SCRIPT_DIR/{claude_binary}" {permissions_flags} {prompt_flag} {prompt} "$@"
 """.format(
+        permissions_flags = permissions_flags,
         claude_binary = claude_binary.short_path,
         prompt_flag = prompt_flag,
         prompt = _shell_quote(full_prompt),
@@ -74,6 +78,9 @@ claude_run = rule(
         "interactive": attr.bool(
             default = False,
             doc = "If True, runs in interactive mode.",
+        ),
+        "allowed_tools": attr.string_list(
+            doc = "List of allowed tools. If empty, uses --dangerously-skip-permissions. See https://docs.anthropic.com/en/docs/claude-code/settings#permissions-settings",
         ),
     },
     executable = True,
