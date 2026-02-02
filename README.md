@@ -1,3 +1,5 @@
+![rules_claude](rules_claude.png)
+
 # rules_claude
 
 Bazel rules for running Claude Code prompts as build, test, and run actions. Built on top of [tools_claude](https://github.com/buildbuddy-rules/tools_claude), a hermetic, cross-platform Claude Code toolchain that you can use to write your own ruleset.
@@ -178,3 +180,7 @@ Runs Claude Code with the given prompt as a Bazel test. The agent evaluates the 
 
 - Bazel 7.0+ with bzlmod enabled
 - Valid `ANTHROPIC_API_KEY` environment variable, or local authentication enabled
+
+## Acknowledgements
+
+Claude and Claude Code are trademarks of Anthropic, PBC.
