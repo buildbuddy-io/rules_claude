@@ -1,6 +1,6 @@
 """Claude run rule that creates an executable to run prompts via bazel run."""
 
-load(":toolchain.bzl", "CLAUDE_TOOLCHAIN_TYPE")
+load(":toolchain.bzl", "CLAUDE_RUNTIME_TOOLCHAIN_TYPE")
 
 def _shell_quote(s):
     """Quote a string for safe use in shell scripts."""
@@ -8,7 +8,7 @@ def _shell_quote(s):
 
 def _claude_run_impl(ctx):
     """Implementation of the claude_run rule."""
-    toolchain = ctx.toolchains[CLAUDE_TOOLCHAIN_TYPE]
+    toolchain = ctx.toolchains[CLAUDE_RUNTIME_TOOLCHAIN_TYPE]
     claude_binary = toolchain.claude_info.binary
 
     # Build the prompt
@@ -84,6 +84,6 @@ claude_run = rule(
         ),
     },
     executable = True,
-    toolchains = [CLAUDE_TOOLCHAIN_TYPE],
+    toolchains = [CLAUDE_RUNTIME_TOOLCHAIN_TYPE],
     doc = "Creates an executable that runs Claude Code with the given prompt. Use with 'bazel run'.",
 )

@@ -1,12 +1,12 @@
 """Claude test rule that runs prompts and checks for PASS/FAIL results."""
 
-load(":toolchain.bzl", "CLAUDE_TOOLCHAIN_TYPE")
+load(":toolchain.bzl", "CLAUDE_RUNTIME_TOOLCHAIN_TYPE")
 load(":flags.bzl", "LocalAuthInfo")
 
 def _claude_test_impl(ctx):
     """Implementation of the claude_test rule."""
     local_auth = ctx.attr.local_auth[LocalAuthInfo].value
-    toolchain = ctx.toolchains[CLAUDE_TOOLCHAIN_TYPE]
+    toolchain = ctx.toolchains[CLAUDE_RUNTIME_TOOLCHAIN_TYPE]
     claude_binary = toolchain.claude_info.binary
 
     # Create the test script and result file
@@ -99,6 +99,6 @@ claude_test = rule(
             doc = "List of allowed tools. If empty, uses --dangerously-skip-permissions. See https://docs.anthropic.com/en/docs/claude-code/settings#permissions-settings",
         ),
     },
-    toolchains = [CLAUDE_TOOLCHAIN_TYPE],
+    toolchains = [CLAUDE_RUNTIME_TOOLCHAIN_TYPE],
     doc = "Runs Claude Code with the given prompt. The agent writes PASS/FAIL and explanation to a result file.",
 )
