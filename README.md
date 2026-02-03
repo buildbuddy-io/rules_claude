@@ -2,7 +2,7 @@
 
 # rules_claude
 
-Bazel rules for running Claude Code prompts as build, test, and run actions. Built on top of [tools_claude](https://github.com/buildbuddy-rules/tools_claude), a hermetic, cross-platform Claude Code toolchain that you can use to write your own ruleset.
+Bazel rules and hermetic toolchain for [Claude Code](https://github.com/anthropics/claude-code) - Anthropic's AI coding assistant CLI. Run Claude prompts as build, test, and run actions, or use the toolchain to write your own rules.
 
 ## Setup
 
@@ -13,15 +13,28 @@ bazel_dep(name = "rules_claude", version = "0.1.0")
 git_override(
     module_name = "rules_claude",
     remote = "https://github.com/buildbuddy-rules/rules_claude.git",
-    commit = "0ac8f9c751281ab8fd2a6d0d94a7c6ed2845b329",
+    commit = "COMMIT_SHA",
 )
+```
 
-bazel_dep(name = "tools_claude", version = "0.1.0")
-git_override(
-    module_name = "tools_claude",
-    remote = "https://github.com/buildbuddy-rules/tools_claude.git",
-    commit = "50ec71d17d4352cd2a48e0c16d564e27841a62ff",
-)
+The toolchain is automatically registered. By default, it downloads version `2.1.25` with SHA256 verification for reproducible builds.
+
+### Pinning a Claude Code version
+
+To pin a specific Claude Code CLI version:
+
+```starlark
+claude = use_extension("@rules_claude//claude:extensions.bzl", "claude")
+claude.download(version = "2.0.0")
+```
+
+### Using the latest version
+
+To always fetch the latest version:
+
+```starlark
+claude = use_extension("@rules_claude//claude:extensions.bzl", "claude")
+claude.download(use_latest = True)
 ```
 
 ## Usage
@@ -175,6 +188,132 @@ Runs Claude Code with the given prompt as a Bazel test. The agent evaluates the 
 | `prompt` | `string` | **Required.** The prompt describing what to test and the pass/fail criteria. |
 | `local_auth` | `label` | Flag to enable local auth mode. Defaults to `@rules_claude//:local_auth`. |
 | `allowed_tools` | `string_list` | List of allowed tools. If empty, uses `--dangerously-skip-permissions`. See [permissions settings](https://docs.anthropic.com/en/docs/claude-code/settings#permissions-settings). |
+
+## Toolchain API
+
+The rules above are built on a hermetic, cross-platform toolchain that you can use directly to write your own rules.
+
+### In genrule
+
+Use the toolchain in a genrule via `toolchains` and make variable expansion:
+
+```starlark
+load("@rules_claude//claude:defs.bzl", "CLAUDE_TOOLCHAIN_TYPE")
+
+genrule(
+    name = "my_genrule",
+    srcs = ["input.py"],
+    outs = ["output.md"],
+    cmd = """
+        export HOME=.home
+        $(CLAUDE_BINARY) --dangerously-skip-permissions -p \
+            'Read $(location input.py) and write API documentation to $@'
+    """,
+    toolchains = [CLAUDE_TOOLCHAIN_TYPE],
+)
+```
+
+The `$(CLAUDE_BINARY)` make variable expands to the path of the Claude Code binary.
+
+**Note:** The `export HOME=.home` line is required because Bazel runs genrules in a sandbox where the real home directory is not writable. Claude Code writes configuration and debug files to `$HOME`, so redirecting it to a writable location within the sandbox prevents permission errors. The `--dangerously-skip-permissions` flag allows Claude to read and write files without interactive approval.
+
+### In custom rules
+
+Use the toolchain in your rule implementation:
+
+```starlark
+load("@rules_claude//claude:defs.bzl", "CLAUDE_TOOLCHAIN_TYPE")
+
+def _my_rule_impl(ctx):
+    toolchain = ctx.toolchains[CLAUDE_TOOLCHAIN_TYPE]
+    claude_binary = toolchain.claude_info.binary
+
+    out = ctx.actions.declare_file(ctx.label.name + ".md")
+    ctx.actions.run(
+        executable = claude_binary,
+        arguments = [
+            "--dangerously-skip-permissions",
+            "-p",
+            "Read {} and write API documentation to {}".format(ctx.file.src.path, out.path),
+        ],
+        inputs = [ctx.file.src],
+        outputs = [out],
+        env = {"HOME": ".home"},
+        use_default_shell_env = True,
+    )
+    return [DefaultInfo(files = depset([out]))]
+
+my_rule = rule(
+    implementation = _my_rule_impl,
+    attrs = {
+        "src": attr.label(allow_single_file = True, mandatory = True),
+    },
+    toolchains = [CLAUDE_TOOLCHAIN_TYPE],
+)
+```
+
+### In tests
+
+For tests that need to run the Claude binary at runtime, use the runtime toolchain type. This ensures the binary matches the target platform where the test executes:
+
+```starlark
+load("@rules_claude//claude:defs.bzl", "CLAUDE_RUNTIME_TOOLCHAIN_TYPE")
+
+def _claude_test_impl(ctx):
+    toolchain = ctx.toolchains[CLAUDE_RUNTIME_TOOLCHAIN_TYPE]
+    claude_binary = toolchain.claude_info.binary
+
+    test_script = ctx.actions.declare_file(ctx.label.name + ".sh")
+    ctx.actions.write(
+        output = test_script,
+        content = """#!/bin/bash
+export HOME="$TEST_TMPDIR"
+{claude} --version
+""".format(claude = claude_binary.short_path),
+        is_executable = True,
+    )
+    return [DefaultInfo(
+        executable = test_script,
+        runfiles = ctx.runfiles(files = [claude_binary]),
+    )]
+
+claude_test = rule(
+    implementation = _claude_test_impl,
+    test = True,
+    toolchains = [CLAUDE_RUNTIME_TOOLCHAIN_TYPE],
+)
+```
+
+### Toolchain types
+
+There are two toolchain types depending on your use case:
+
+- **`CLAUDE_TOOLCHAIN_TYPE`** - Use for build-time actions (genrules, custom rules). Selected based on the execution platform. Use this when Claude's output isn't platform-specific.
+
+- **`CLAUDE_RUNTIME_TOOLCHAIN_TYPE`** - Use for tests or run targets where the Claude binary executes on the target platform.
+
+### Public API
+
+From `@rules_claude//claude:defs.bzl`:
+
+| Symbol | Description |
+|--------|-------------|
+| `claude` | Rule for running Claude prompts as build actions |
+| `claude_run` | Rule for running Claude prompts with `bazel run` |
+| `claude_test` | Rule for running Claude prompts as tests |
+| `CLAUDE_TOOLCHAIN_TYPE` | Toolchain type for build actions (exec platform) |
+| `CLAUDE_RUNTIME_TOOLCHAIN_TYPE` | Toolchain type for test/run (target platform) |
+| `ClaudeInfo` | Provider with `binary` field containing the Claude Code executable |
+| `claude_toolchain` | Rule for defining custom toolchain implementations |
+| `LocalAuthInfo` | Provider for local auth flag |
+| `local_auth_flag` | Rule for defining local auth build settings |
+
+## Supported platforms
+
+- `darwin_arm64` (macOS Apple Silicon)
+- `darwin_amd64` (macOS Intel)
+- `linux_arm64`
+- `linux_amd64`
 
 ## Requirements
 

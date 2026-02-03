@@ -1,6 +1,6 @@
 """Claude test rule that runs prompts and checks for PASS/FAIL results."""
 
-load("@tools_claude//claude:defs.bzl", "CLAUDE_TOOLCHAIN_TYPE")
+load(":toolchain.bzl", "CLAUDE_TOOLCHAIN_TYPE")
 load(":flags.bzl", "LocalAuthInfo")
 
 def _claude_test_impl(ctx):

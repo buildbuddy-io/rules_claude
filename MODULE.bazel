@@ -1,11 +1,16 @@
+"""Bazel rules for Claude Code - Anthropic's AI coding assistant CLI."""
+
 module(
     name = "rules_claude",
     version = "0.1.0",
 )
 
-bazel_dep(name = "tools_claude", version = "0.1.0")
-git_override(
-    module_name = "tools_claude",
-    remote = "https://github.com/buildbuddy-rules/tools_claude.git",
-    commit = "72566f7ecf4e785c66ad337707eb1c1dabd56204",
-)
+bazel_dep(name = "platforms", version = "1.0.0")
+
+# Set up the Claude Code CLI binary (downloads default version)
+claude = use_extension("//claude:extensions.bzl", "claude")
+claude.download()
+use_repo(claude, "claude_toolchains")
+
+# Register toolchains for all platforms
+register_toolchains("@claude_toolchains//:all")

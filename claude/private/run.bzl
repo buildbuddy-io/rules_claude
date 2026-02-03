@@ -1,6 +1,6 @@
 """Claude run rule that creates an executable to run prompts via bazel run."""
 
-load("@tools_claude//claude:defs.bzl", "CLAUDE_TOOLCHAIN_TYPE")
+load(":toolchain.bzl", "CLAUDE_TOOLCHAIN_TYPE")
 
 def _shell_quote(s):
     """Quote a string for safe use in shell scripts."""

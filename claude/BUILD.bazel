@@ -1,1 +1,7 @@
-# BUILD file for claude package
+package(default_visibility = ["//visibility:public"])
+
+toolchain_type(name = "toolchain_type")
+
+# Runtime toolchain type for test/run scenarios where the binary
+# needs to execute on the target platform
+toolchain_type(name = "runtime_toolchain_type")
