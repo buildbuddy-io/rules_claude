@@ -31,9 +31,12 @@ def _claude_run_impl(ctx):
         full_prompt = full_prompt + " Write the output to " + ctx.attr.out
 
     prompt_flag = "" if ctx.attr.interactive else "-p"
-    permissions_flags = "--dangerously-skip-permissions"
     if ctx.attr.allowed_tools:
         permissions_flags = "--allowedTools " + " ".join(ctx.attr.allowed_tools)
+    elif ctx.attr.interactive:
+        permissions_flags = ""
+    else:
+        permissions_flags = "--dangerously-skip-permissions"
     script = ctx.actions.declare_file(ctx.label.name + ".sh")
     script_content = """#!/bin/bash
 set -e
